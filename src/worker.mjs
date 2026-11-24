@@ -70,6 +70,7 @@ async function handleMcp(db,user,body) {
     case "notifications/initialized": return new Response(null,{status:202});
     case "tools/list": return json(rpc(id,{tools:schemas}));
     case "tools/call":
+      if(!user)return json({jsonrpc:"2.0",id,error:{code:-32001,message:"Masuk dengan ChatGPT untuk mengakses data bisnis."}});
       try {
         const result=await execute(db,user,body.params?.name,body.params?.arguments??{});
         return json(rpc(id,{content:[{type:"text",text:JSON.stringify(result)}],isError:false}));
@@ -89,8 +90,8 @@ export default {async fetch(request,env){
   if(request.method!=="POST"||!["/mcp","/api"].includes(path))return new Response(null,{status:405});
   if(path==="/api"&&request.headers.get("origin")!==url.origin)return json({error:"Asal permintaan tidak valid."},403);
   const id=request.headers.get("oai-authenticated-user-id");
-  if(!id)return json({error:"Masuk dengan ChatGPT untuk melanjutkan."},401);
-  const user={id,email:clean(request.headers.get("oai-authenticated-user-email"),254).toLowerCase()};
+  if(path==="/api"&&!id)return json({error:"Masuk dengan ChatGPT untuk melanjutkan."},401);
+  const user=id?{id,email:clean(request.headers.get("oai-authenticated-user-email"),254).toLowerCase()}:null;
   try {
     const payload=await request.text();
     if(payload.length>50000)return json({error:"Kiriman terlalu besar."},413);
