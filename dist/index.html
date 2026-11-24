@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071913" />
+    <meta
+      name="description"
+      content="MBACS — sistem customer service dan CRM bengkel untuk mengelola percakapan, prospek, booking, dan retensi pelanggan."
+    />
+    <title>MBACS — Customer Service & CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 36 36" role="img">
+              <path d="M8 8h20v20H8z" fill="none" stroke="currentColor" stroke-width="3" />
+              <path d="M12 23V13l6 6 6-6v10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" />
+            </svg>
+          </div>
+          <div><strong>MBACS</strong><span>Customer OS</span></div>
+        </div>
+
+        <nav class="main-nav" aria-label="Navigasi utama">
+          <button class="nav-item active" data-view="dashboard">
+            <span class="nav-icon" data-icon="grid"></span><span>Ringkasan</span>
+          </button>
+          <button class="nav-item" data-view="inbox">
+            <span class="nav-icon" data-icon="message"></span><span>Inbox</span><b class="nav-badge">4</b>
+          </button>
+          <button class="nav-item" data-view="pipeline">
+            <span class="nav-icon" data-icon="pipeline"></span><span>Lead Pipeline</span>
+          </button>
+          <button class="nav-item" data-view="booking">
+            <span class="nav-icon" data-icon="calendar"></span><span>Booking</span>
+          </button>
+          <button class="nav-item" data-view="customers">
+            <span class="nav-icon" data-icon="users"></span><span>Pelanggan</span>
+          </button>
+          <button class="nav-item" data-view="retention">
+            <span class="nav-icon" data-icon="heart"></span><span>Retensi</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-lower">
+          <div class="system-card">
+            <div class="system-card-head"><span class="pulse"></span><strong>Sistem aktif</strong></div>
+            <p>WhatsApp & otomasi berjalan normal.</p>
+            <div class="system-meter"><span></span></div>
+            <small>14 workflow terhubung</small>
+          </div>
+          <button class="nav-item subtle" data-view="settings">
+            <span class="nav-icon" data-icon="settings"></span><span>Pengaturan</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <button class="icon-button mobile-menu" id="mobileMenu" aria-label="Buka menu"><span data-icon="menu"></span></button>
+          <div class="global-search">
+            <span data-icon="search"></span>
+            <input id="globalSearch" type="search" placeholder="Cari pelanggan, nomor WA, atau kendaraan..." />
+            <kbd>⌘ K</kbd>
+          </div>
+          <div class="top-actions">
+            <button class="icon-button notification-button" aria-label="Notifikasi"><span data-icon="bell"></span><i></i></button>
+            <div class="user-profile">
+              <div class="avatar avatar-green">AR</div>
+              <div><strong>Andi Ramadhan</strong><span>CS Supervisor</span></div>
+              <span data-icon="chevron"></span>
+            </div>
+          </div>
+        </header>
+
+        <section class="view active" id="view-dashboard">
+          <div class="page-heading dashboard-heading">
+            <div>
+              <p class="eyebrow">Rabu, 25 November 2026</p>
+              <h1>Selamat pagi, Andi.</h1>
+              <p>Berikut hal yang perlu tim Anda tangani hari ini.</p>
+            </div>
+            <button class="primary-button" data-action="new-booking"><span data-icon="plus"></span>Buat booking</button>
+          </div>
+
+          <div class="priority-strip">
+            <div class="priority-copy"><span data-icon="spark"></span><div><strong>Fokus hari ini</strong><p>3 percakapan perlu respons dan 2 booking belum dikonfirmasi.</p></div></div>
+            <button data-nav="inbox">Tinjau sekarang</button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-icon coral" data-icon="message"></span><span class="trend up">↓ 18%</span></div>
+              <p>Belum dibalas</p><strong>4</strong><small>dari 28 percakapan aktif</small>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-icon amber" data-icon="clock"></span><span class="trend up">↓ 1m 12d</span></div>
+              <p>Respons pertama</p><strong>3m 48d</strong><small>target di bawah 5 menit</small>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-icon blue" data-icon="calendar"></span><span class="trend up">+12%</span></div>
+              <p>Booking hari ini</p><strong>12</strong><small>9 sudah dikonfirmasi</small>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-icon green" data-icon="target"></span><span class="trend up">+6.4%</span></div>
+              <p>Konversi bulan ini</p><strong>42.8%</strong><small>107 dari 250 prospek</small>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="panel conversations-panel">
+              <div class="panel-heading"><div><h2>Percakapan perlu ditangani</h2><p>Diurutkan berdasarkan urgensi</p></div><button class="text-button" data-nav="inbox">Lihat inbox</button></div>
+              <div class="attention-list" id="attentionList"></div>
+            </article>
+
+            <article class="panel appointments-panel">
+              <div class="panel-heading"><div><h2>Jadwal hari ini</h2><p>Rabu, 25 November</p></div><button class="icon-button" data-nav="booking" aria-label="Buka kalender"><span data-icon="calendar"></span></button></div>
+              <div class="timeline" id="todayTimeline"></div>
+              <button class="panel-footer-button" data-nav="booking">Lihat semua jadwal</button>
+            </article>
+
+            <article class="panel pipeline-summary-panel">
+              <div class="panel-heading"><div><h2>Pergerakan pipeline</h2><p>7 hari terakhir</p></div><button class="more-button">•••</button></div>
+              <div class="pipeline-bars" id="pipelineBars"></div>
+              <div class="conversion-note"><span data-icon="spark"></span><p><strong>8 prospek siap ditindaklanjuti</strong><br />Peluang booking paling tinggi hari ini.</p><button data-nav="pipeline">Buka pipeline</button></div>
+            </article>
+
+            <article class="panel task-panel">
+              <div class="panel-heading"><div><h2>Tindak lanjut hari ini</h2><p>Next action yang jatuh tempo</p></div><span class="count-pill">5 tugas</span></div>
+              <div id="taskList" class="task-list"></div>
+              <button class="panel-footer-button" data-nav="pipeline">Kelola semua tindak lanjut</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="view inbox-view" id="view-inbox">
+          <div class="page-heading compact-heading"><div><p class="eyebrow">Customer service</p><h1>Inbox</h1><p>Semua percakapan pelanggan dalam satu tempat.</p></div><button class="secondary-button"><span data-icon="filter"></span>Filter</button></div>
+          <div class="inbox-layout panel">
+            <aside class="conversation-list-pane">
+              <div class="inbox-filters"><button class="active">Semua <span>12</span></button><button>Belum dibalas <span>4</span></button></div>
+              <div class="mini-search"><span data-icon="search"></span><input id="conversationSearch" placeholder="Cari percakapan" /></div>
+              <div id="conversationList" class="conversation-list"></div>
+            </aside>
+            <section class="chat-pane" id="chatPane"></section>
+            <aside class="context-pane" id="contextPane"></aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-pipeline">
+          <div class="page-heading compact-heading"><div><p class="eyebrow">Penjualan</p><h1>Lead Pipeline</h1><p>Pastikan setiap prospek memiliki langkah berikutnya.</p></div><button class="primary-button" data-action="new-lead"><span data-icon="plus"></span>Tambah lead</button></div>
+          <div class="filter-row"><div class="mini-search wide"><span data-icon="search"></span><input placeholder="Cari lead atau kendaraan" /></div><button class="secondary-button">Semua sumber <span data-icon="chevron"></span></button><button class="secondary-button">Semua CS <span data-icon="chevron"></span></button></div>
+          <div class="kanban" id="kanbanBoard"></div>
+        </section>
+
+        <section class="view" id="view-booking">
+          <div class="page-heading compact-heading"><div><p class="eyebrow">Operasional bengkel</p><h1>Booking</h1><p>Atur slot, konfirmasi, dan kedatangan pelanggan.</p></div><button class="primary-button" data-action="new-booking"><span data-icon="plus"></span>Buat booking</button></div>
+          <div class="booking-toolbar panel"><div class="date-navigator"><button class="icon-button" id="prevDay"><span data-icon="left"></span></button><div><strong>Rabu, 25 November 2026</strong><span>Hari ini</span></div><button class="icon-button" id="nextDay"><span data-icon="right"></span></button></div><div class="segmented"><button class="active">Hari</button><button>Minggu</button><button>Bulan</button></div></div>
+          <div class="booking-grid">
+            <article class="panel booking-schedule"><div class="schedule-head"><span>Waktu</span><span>Bay 1</span><span>Bay 2</span><span>Bay 3</span></div><div id="scheduleGrid"></div></article>
+            <aside class="panel booking-summary"><div class="panel-heading"><div><h2>Ringkasan hari ini</h2><p>Kapasitas operasional</p></div></div><div id="bookingSummary"></div></aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-customers">
+          <div class="page-heading compact-heading"><div><p class="eyebrow">Customer 360</p><h1>Pelanggan</h1><p>Profil, kendaraan, dan riwayat layanan yang utuh.</p></div><button class="primary-button" data-action="new-customer"><span data-icon="plus"></span>Tambah pelanggan</button></div>
+          <div class="panel customer-table-panel">
+            <div class="table-toolbar"><div class="mini-search wide"><span data-icon="search"></span><input id="customerSearch" placeholder="Cari nama, telepon, atau nomor polisi" /></div><button class="secondary-button"><span data-icon="filter"></span>Filter</button></div>
+            <div class="customer-table" id="customerTable"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-retention">
+          <div class="page-heading compact-heading"><div><p class="eyebrow">Hubungan pelanggan</p><h1>Retensi</h1><p>Kelola after-sales, pengingat perawatan, dan referral.</p></div><button class="primary-button"><span data-icon="plus"></span>Buat reminder</button></div>
+          <div class="retention-metrics metric-grid"></div>
+          <div class="retention-grid"><article class="panel"><div class="panel-heading"><div><h2>Follow-up terjadwal</h2><p>7 hari ke depan</p></div><button class="text-button">Lihat semua</button></div><div id="retentionList" class="retention-list"></div></article><article class="panel health-panel"><div class="panel-heading"><div><h2>Kesehatan pelanggan</h2><p>Berdasarkan aktivitas 90 hari</p></div></div><div class="health-ring"><div><strong>78</strong><span>baik</span></div></div><div class="health-legend"><p><i class="good"></i><span>Aktif</span><strong>684</strong></p><p><i class="watch"></i><span>Perlu perhatian</span><strong>172</strong></p><p><i class="risk"></i><span>Berisiko hilang</span><strong>68</strong></p></div></article></div>
+        </section>
+
+        <section class="view" id="view-settings">
+          <div class="page-heading compact-heading"><div><p class="eyebrow">Konfigurasi</p><h1>Pengaturan</h1><p>Kelola bengkel, tim, integrasi, dan aturan AI.</p></div></div>
+          <div class="settings-grid" id="settingsGrid"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="modalBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-head"><div><p class="eyebrow">MBACS</p><h2 id="modalTitle">Buat booking baru</h2></div><button class="icon-button" id="closeModal" aria-label="Tutup"><span data-icon="close"></span></button></div>
+        <form id="quickForm">
+          <label>Nama pelanggan<input required name="customer" placeholder="Contoh: Budi Santoso" /></label>
+          <div class="form-row"><label>Nomor WhatsApp<input required name="phone" placeholder="08xxxxxxxxxx" /></label><label>Nomor polisi<input required name="plate" placeholder="B 1234 XYZ" /></label></div>
+          <label>Keluhan / kebutuhan<textarea required name="need" rows="3" placeholder="Jelaskan kebutuhan pelanggan secara singkat"></textarea></label>
+          <div class="form-row"><label>Tanggal<input required name="date" type="date" value="2026-11-26" /></label><label>Jam<input required name="time" type="time" value="10:00" /></label></div>
+          <div class="modal-actions"><button type="button" class="secondary-button" id="cancelModal">Batal</button><button class="primary-button" type="submit">Simpan booking</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"><span data-icon="check"></span><p><strong>Berhasil</strong><small>Data telah disimpan.</small></p></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
