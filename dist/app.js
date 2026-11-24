@@ -26,7 +26,7 @@ const icons = {
 
 document.querySelectorAll('[data-icon]').forEach((el) => { el.innerHTML = icons[el.dataset.icon] || ''; });
 
-const conversations = [
+let conversations = [
   { id: 1, name: 'Dimas Prasetyo', initials: 'DP', tone: 'avatar-blue', time: '09:42', unread: 2, preview: 'Ada bunyi gluduk saat lewat polisi tidur...', status: 'Perlu respons', vehicle: 'Honda HR-V 2021', plate: 'B 1842 KZT', source: 'Instagram Ads', score: 86, messages: [
     ['customer', 'Pagi kak, mobil saya belakangan ada bunyi gluduk kalau lewat polisi tidur.', '09:38'],
     ['agent', 'Selamat pagi Pak Dimas. Saya bantu cek dulu ya. Bunyinya terasa dari bagian depan atau belakang kendaraan?', '09:39'],
@@ -57,14 +57,17 @@ const attentionData = [
   { id: 4, badge: 'Follow-up', time: '28 mnt', text: 'Menanyakan jam operasional hari Sabtu.' }
 ];
 
-const appointments = [
-  { time: '08:30', name: 'Budi Santoso', job: 'Servis berkala · Avanza', status: 'Hadir' },
-  { time: '10:00', name: 'Nadia Putri', job: 'Pemeriksaan rem · Brio', status: 'Dikonfirmasi' },
-  { time: '13:00', name: 'Fajar Nugroho', job: 'Ganti oli · Xpander', status: 'Dikonfirmasi' },
-  { time: '15:30', name: 'Arman Hakim', job: 'Diagnostik AC · Jazz', status: 'Belum konfirmasi' }
+let appointments = [
+  { time: '08:30', name: 'Budi Santoso', job: 'Servis berkala · Avanza', status: 'Hadir', bay: 1, date: '2026-11-25', tone: 'green' },
+  { time: '08:00', name: 'Nadia Putri', job: 'Pemeriksaan rem · Brio', status: 'Dikonfirmasi', bay: 3, date: '2026-11-25', tone: 'blue' },
+  { time: '10:00', name: 'Rizal Akbar', job: 'Ganti oli · Agya', status: 'Dikonfirmasi', bay: 2, date: '2026-11-25', tone: 'amber' },
+  { time: '10:30', name: 'Dewi Kurnia', job: 'Spooring · Mobilio', status: 'Dikonfirmasi', bay: 3, date: '2026-11-25', tone: 'green' },
+  { time: '12:00', name: 'Fajar Nugroho', job: 'Ganti oli & filter · Xpander', status: 'Dikonfirmasi', bay: 1, date: '2026-11-25', tone: 'blue' },
+  { time: '14:00', name: 'Arman Hakim', job: 'Diagnostik AC · Jazz', status: 'Belum konfirmasi', bay: 1, date: '2026-11-25', tone: 'amber' },
+  { time: '14:30', name: 'Tono Wijaya', job: 'Cek kelistrikan · Innova', status: 'Dikonfirmasi', bay: 2, date: '2026-11-25', tone: 'green' }
 ];
 
-const tasks = [
+let tasks = [
   ['Hubungi kembali Pak Hendra', 'Lead · Toyota Rush 2020', '10:00'],
   ['Konfirmasi booking Bu Sari', 'Booking besok · 09.00', '11:30'],
   ['Follow-up estimasi Pak Dimas', 'Lead qualified · Suspensi', '13:00'],
@@ -72,7 +75,7 @@ const tasks = [
   ['Ingatkan servis Pak Agung', 'Maintenance recall', '17:00']
 ];
 
-const leadColumns = [
+let leadColumns = [
   { title: 'Baru', value: 'Rp 18,5 jt', cards: [
     ['Aldi Saputra', 'Bunyi pada kaki-kaki depan', 'Honda Jazz 2017', 78, 'Respons · 10.30'],
     ['Lina Marlina', 'Servis rutin 40.000 km', 'Toyota Raize 2022', 84, 'Hubungi · 11.00'],
@@ -97,7 +100,7 @@ const leadColumns = [
   ]}
 ];
 
-const customers = [
+let customers = [
   ['Budi Santoso','BS','avatar-green','0812 8421 7712','Toyota Avanza 2019','B 1923 TZA','Hari ini','Rp 8,4 jt','Aktif'],
   ['Nadia Putri','NP','avatar-purple','0813 5572 9018','Honda Brio 2021','B 2811 KFI','Hari ini','Rp 4,7 jt','Aktif'],
   ['Fajar Nugroho','FN','avatar-blue','0857 3324 1109','Mitsubishi Xpander 2022','B 1428 VME','25 Nov 2026','Rp 6,2 jt','Aktif'],
@@ -106,15 +109,45 @@ const customers = [
   ['Maya Anggraini','MA','avatar-green','0812 9034 5521','Suzuki Ertiga 2020','B 3058 PZH','08 Sep 2026','Rp 3,8 jt','Aktif']
 ];
 
+const STORAGE_KEY = 'mbacs.crm.v2';
+const seedState = JSON.parse(JSON.stringify({ conversations, appointments, tasks, leadColumns, customers }));
+let activeConversationId = 1;
+
+function restoreState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved) return;
+    conversations = Array.isArray(saved.conversations) ? saved.conversations : conversations;
+    appointments = Array.isArray(saved.appointments) ? saved.appointments : appointments;
+    tasks = Array.isArray(saved.tasks) ? saved.tasks : tasks;
+    leadColumns = Array.isArray(saved.leadColumns) ? saved.leadColumns : leadColumns;
+    customers = Array.isArray(saved.customers) ? saved.customers : customers;
+  } catch (error) {
+    console.warn('Data lokal MBACS tidak dapat dibaca.', error);
+  }
+}
+
+function persistState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ conversations, appointments, tasks, leadColumns, customers, savedAt: new Date().toISOString() }));
+}
+
+function resetDemoState() {
+  ({ conversations, appointments, tasks, leadColumns, customers } = JSON.parse(JSON.stringify(seedState)));
+  persistState();
+  renderAll();
+}
+
+restoreState();
+
 function renderDashboard() {
   document.querySelector('#attentionList').innerHTML = attentionData.map((item) => {
     const c = conversations.find((entry) => entry.id === item.id);
     return `<div class="attention-item" data-conversation="${c.id}"><div class="avatar ${c.tone}">${c.initials}</div><div class="attention-main"><div class="attention-title"><strong>${c.name}</strong><span>${item.badge}</span></div><p>${item.text}</p></div><div class="attention-meta"><time>${item.time}</time>${c.unread ? `<b>${c.unread}</b>` : ''}</div></div>`;
   }).join('');
-  document.querySelector('#todayTimeline').innerHTML = appointments.map((a) => `<div class="timeline-item"><time>${a.time}</time><i class="timeline-marker"></i><div class="timeline-copy"><strong>${a.name}</strong><p>${a.job}</p><span>${a.status}</span></div></div>`).join('');
+  document.querySelector('#todayTimeline').innerHTML = appointments.slice().sort((a,b) => a.time.localeCompare(b.time)).slice(0,4).map((a) => `<div class="timeline-item"><time>${a.time}</time><i class="timeline-marker"></i><div class="timeline-copy"><strong>${escapeHtml(a.name)}</strong><p>${escapeHtml(a.job)}</p><span>${a.status}</span></div></div>`).join('');
   const bars = [['Baru', 36, 18], ['Dihubungi', 54, 27], ['Qualified', 78, 39], ['Booking', 48, 24], ['Konversi', 28, 14]];
   document.querySelector('#pipelineBars').innerHTML = bars.map(([name,width,total]) => `<div class="pipeline-row"><label>${name}</label><div class="bar"><span style="width:${width}%"></span></div><strong>${total}</strong></div>`).join('');
-  document.querySelector('#taskList').innerHTML = tasks.map((t,i) => `<div class="task-item"><button class="task-check" data-task="${i}" aria-label="Tandai tugas selesai"></button><div class="task-copy"><strong>${t[0]}</strong><span>${t[1]}</span></div><time>${t[2]}</time></div>`).join('');
+  document.querySelector('#taskList').innerHTML = tasks.map((t,i) => `<div class="task-item ${t[3] ? 'done' : ''}"><button class="task-check" data-task="${i}" aria-label="Tandai tugas selesai"></button><div class="task-copy"><strong>${t[0]}</strong><span>${t[1]}</span></div><time>${t[2]}</time></div>`).join('');
 }
 
 function renderConversationList(filter = '') {
@@ -124,6 +157,7 @@ function renderConversationList(filter = '') {
 
 function renderChat(id = 1) {
   const c = conversations.find((item) => item.id === Number(id)) || conversations[0];
+  activeConversationId = c.id;
   document.querySelectorAll('.conversation-card').forEach((el) => el.classList.toggle('active', Number(el.dataset.id) === c.id));
   document.querySelector('#chatPane').innerHTML = `<header class="chat-head"><div class="chat-head-main"><div class="avatar ${c.tone}">${c.initials}</div><div><strong>${c.name}</strong><span>WhatsApp · terakhir aktif ${c.time}</span></div></div><span class="chat-status">${c.status}</span></header><div class="messages">${c.messages.map((m) => `<div class="message ${m[0]}"><div class="bubble">${m[1]}</div><time>${m[2]}</time></div>`).join('')}</div><div class="ai-suggestion"><span data-icon="spark">${icons.spark}</span><div><strong>Saran balasan AI</strong><p>Sebaiknya jadwalkan pemeriksaan langsung agar tim teknisi dapat memastikan penyebabnya tanpa memberi diagnosis awal.</p></div><button data-use-suggestion>Gunakan</button></div><form class="composer" id="messageComposer"><textarea rows="1" placeholder="Tulis balasan..."></textarea><button class="send-button" aria-label="Kirim pesan">${icons.send}</button></form>`;
   document.querySelector('#contextPane').innerHTML = `<div class="context-profile"><div class="avatar ${c.tone}">${c.initials}</div><h3>${c.name}</h3><p>+62 812 3400 ${String(c.id).padStart(4,'0')}</p></div><div class="context-section"><h3>Ringkasan lead</h3><div class="context-detail"><span>Status</span><strong>${c.status}</strong></div><div class="context-detail"><span>Skor</span><strong>${c.score}/100</strong></div><div class="context-detail"><span>Sumber</span><strong>${c.source}</strong></div></div><div class="context-section"><h3>Kendaraan</h3><div class="vehicle-card"><strong>${c.vehicle}</strong><span>${c.plate}</span></div></div><div class="context-section"><h3>Catatan AI</h3><p style="font-size:.65rem;color:var(--muted);line-height:1.5;margin:0">Pelanggan menjelaskan gejala dengan jelas. Hindari diagnosis final; arahkan ke pemeriksaan teknisi.</p></div>`;
@@ -136,29 +170,27 @@ function bindChatActions() {
   });
   document.querySelector('#messageComposer')?.addEventListener('submit', (event) => {
     event.preventDefault(); const input = event.currentTarget.querySelector('textarea'); if (!input.value.trim()) return;
-    const messages = document.querySelector('.messages'); messages.insertAdjacentHTML('beforeend', `<div class="message agent"><div class="bubble">${escapeHtml(input.value)}</div><time>Baru saja</time></div>`); input.value = ''; messages.scrollTop = messages.scrollHeight; showToast('Pesan terkirim', 'Balasan tercatat di riwayat pelanggan.');
+    const c = conversations.find((item) => item.id === activeConversationId); const text = input.value.trim();
+    c.messages.push(['agent', text, 'Baru saja']); c.preview = text; c.time = 'Baru saja'; c.unread = 0; persistState();
+    const messages = document.querySelector('.messages'); messages.insertAdjacentHTML('beforeend', `<div class="message agent"><div class="bubble">${escapeHtml(text)}</div><time>Baru saja</time></div>`); input.value = ''; messages.scrollTop = messages.scrollHeight; renderConversationList(); showToast('Pesan terkirim', 'Balasan tercatat di riwayat pelanggan.');
   });
 }
 
 function renderPipeline() {
-  document.querySelector('#kanbanBoard').innerHTML = leadColumns.map((col,i) => `<section class="kanban-column"><div class="kanban-head"><div class="kanban-title"><i style="opacity:${.55+i*.1}"></i><strong>${col.title}</strong><span>${col.cards.length}</span></div><span class="kanban-value">${col.value}</span></div>${col.cards.map((c) => `<article class="lead-card"><div class="lead-card-top"><strong>${c[0]}</strong><span class="score">${c[3]}</span></div><p>${c[1]}</p><span class="lead-vehicle">${icons.car}${c[2]}</span><div class="lead-next"><span>${c[4]}</span><i class="mini-avatar">AR</i></div></article>`).join('')}</section>`).join('');
+  document.querySelector('#kanbanBoard').innerHTML = leadColumns.map((col,i) => `<section class="kanban-column"><div class="kanban-head"><div class="kanban-title"><i style="opacity:${.55+i*.1}"></i><strong>${col.title}</strong><span>${col.cards.length}</span></div><span class="kanban-value">${col.value}</span></div>${col.cards.map((c,cardIndex) => `<article class="lead-card"><div class="lead-card-top"><strong>${escapeHtml(c[0])}</strong><span class="score">${c[3]}</span></div><p>${escapeHtml(c[1])}</p><span class="lead-vehicle">${icons.car}${escapeHtml(c[2])}</span><div class="lead-next"><span>${c[4]}</span><div class="lead-controls"><i class="mini-avatar">AR</i>${i < leadColumns.length - 1 ? `<button class="advance-lead" data-advance-lead="${i}:${cardIndex}" title="Pindahkan ke ${leadColumns[i+1].title}">${icons.right}</button>` : ''}</div></div></article>`).join('')}</section>`).join('');
 }
 
 function renderBooking() {
-  const rows = [
-    ['08:00', ['Budi Santoso','Servis berkala','green'], null, ['Nadia Putri','Pemeriksaan rem','blue']],
-    ['10:00', null, ['Rizal Akbar','Ganti oli','amber'], ['Dewi Kurnia','Spooring','green']],
-    ['12:00', ['Fajar Nugroho','Ganti oli & filter','blue'], null, null],
-    ['14:00', ['Arman Hakim','Diagnostik AC','amber'], ['Tono Wijaya','Cek kelistrikan','green'], null],
-    ['16:00', null, ['Slot tersedia','Belum terisi','empty'], null]
-  ];
-  document.querySelector('#scheduleGrid').innerHTML = rows.map((r) => `<div class="schedule-row"><div class="schedule-time">${r[0]}</div>${r.slice(1).map((b) => `<div class="schedule-cell">${b ? `<div class="booking-block ${b[2]}"><strong>${b[0]}</strong><span>${b[1]}</span></div>` : ''}</div>`).join('')}</div>`).join('');
-  document.querySelector('#bookingSummary').innerHTML = `<div class="summary-block"><div class="capacity-number"><strong>9</strong><span>dari 12 slot terisi</span></div><div class="capacity-bar"><span></span></div></div><div class="summary-block"><div class="summary-stat"><span>Dikonfirmasi</span><strong>7</strong></div><div class="summary-stat"><span>Menunggu konfirmasi</span><strong>2</strong></div><div class="summary-stat"><span>Sudah hadir</span><strong>3</strong></div><div class="summary-stat"><span>Slot tersedia</span><strong>3</strong></div></div>`;
+  const slots = [8,10,12,14,16];
+  const rows = slots.map((hour) => [String(hour).padStart(2,'0') + ':00', ...[1,2,3].map((bay) => appointments.find((a) => Number(a.bay) === bay && Math.floor(Number(a.time.split(':')[0]) / 2) * 2 === hour))]);
+  document.querySelector('#scheduleGrid').innerHTML = rows.map((r) => `<div class="schedule-row"><div class="schedule-time">${r[0]}</div>${r.slice(1).map((b) => `<div class="schedule-cell">${b ? `<div class="booking-block ${b.tone || 'green'}"><strong>${escapeHtml(b.name)}</strong><span>${escapeHtml(b.job)}</span></div>` : ''}</div>`).join('')}</div>`).join('');
+  const confirmed = appointments.filter((a) => a.status === 'Dikonfirmasi').length; const present = appointments.filter((a) => a.status === 'Hadir').length; const pending = appointments.length - confirmed - present; const total = 15;
+  document.querySelector('#bookingSummary').innerHTML = `<div class="summary-block"><div class="capacity-number"><strong>${appointments.length}</strong><span>dari ${total} slot terisi</span></div><div class="capacity-bar"><span style="width:${Math.min(100, appointments.length/total*100)}%"></span></div></div><div class="summary-block"><div class="summary-stat"><span>Dikonfirmasi</span><strong>${confirmed}</strong></div><div class="summary-stat"><span>Menunggu konfirmasi</span><strong>${pending}</strong></div><div class="summary-stat"><span>Sudah hadir</span><strong>${present}</strong></div><div class="summary-stat"><span>Slot tersedia</span><strong>${Math.max(0,total-appointments.length)}</strong></div></div>`;
 }
 
 function renderCustomers(filter = '') {
   const list = customers.filter((c) => c.join(' ').toLowerCase().includes(filter.toLowerCase()));
-  document.querySelector('#customerTable').innerHTML = `<div class="customer-row header"><span>Pelanggan</span><span>Kendaraan</span><span>Terakhir servis</span><span>Nilai transaksi</span><span>Status</span><span></span></div>${list.map((c) => `<div class="customer-row"><div class="customer-name"><div class="avatar ${c[2]}">${c[1]}</div><div><strong>${c[0]}</strong><span>${c[3]}</span></div></div><div class="customer-vehicle"><strong>${c[4]}</strong><span>${c[5]}</span></div><span>${c[6]}</span><strong style="font-size:.7rem">${c[7]}</strong><span class="status-chip">${c[8]}</span><button class="row-action">•••</button></div>`).join('')}`;
+  document.querySelector('#customerTable').innerHTML = `<div class="customer-row header"><span>Pelanggan</span><span>Kendaraan</span><span>Terakhir servis</span><span>Nilai transaksi</span><span>Status</span><span></span></div>${list.map((c) => { const idx = customers.indexOf(c); return `<div class="customer-row" data-customer-index="${idx}"><div class="customer-name"><div class="avatar ${c[2]}">${c[1]}</div><div><strong>${escapeHtml(c[0])}</strong><span>${escapeHtml(c[3])}</span></div></div><div class="customer-vehicle"><strong>${escapeHtml(c[4])}</strong><span>${escapeHtml(c[5])}</span></div><span>${c[6]}</span><strong style="font-size:.7rem">${c[7]}</strong><span class="status-chip">${c[8]}</span><button class="row-action" aria-label="Buka profil pelanggan">•••</button></div>`; }).join('')}`;
 }
 
 function renderRetention() {
@@ -170,7 +202,7 @@ function renderRetention() {
 
 function renderSettings() {
   const settings = [['settings','Profil bengkel','Alamat, jam operasional, dan kebijakan layanan'],['users','Tim & hak akses','Atur supervisor, CS, dan penanggung jawab lead'],['message','Integrasi WhatsApp','Nomor, webhook, dan template pesan resmi'],['spark','Aturan AI Assistant','Knowledge base, guardrail, dan human handoff'],['pipeline','Workflow n8n','Status otomasi customer service dan CRM'],['calendar','Slot & kapasitas','Jam booking, bay servis, dan hari libur']];
-  document.querySelector('#settingsGrid').innerHTML = settings.map((s) => `<article class="panel setting-card"><span class="setting-icon">${icons[s[0]]}</span><div><h3>${s[1]}</h3><p>${s[2]}</p></div>${icons.right}</article>`).join('');
+  document.querySelector('#settingsGrid').innerHTML = settings.map((s) => `<article class="panel setting-card"><span class="setting-icon">${icons[s[0]]}</span><div><h3>${s[1]}</h3><p>${s[2]}</p></div>${icons.right}</article>`).join('') + `<article class="panel setting-card data-card"><span class="setting-icon">${icons.check}</span><div><h3>Data lokal</h3><p>Data operasional tersimpan aman di browser ini.</p><div class="setting-actions"><button data-export-data>Ekspor JSON</button><button class="danger-link" data-reset-data>Reset demo</button></div></div></article>`;
 }
 
 function navigate(view) {
@@ -181,14 +213,25 @@ function navigate(view) {
 
 function openModal(action = 'booking') {
   const title = action === 'new-lead' ? 'Tambah lead baru' : action === 'new-customer' ? 'Tambah pelanggan baru' : 'Buat booking baru';
+  const today = new Date().toISOString().slice(0,10); const form = document.querySelector('#quickForm'); form.dataset.action = action;
   document.querySelector('#modalTitle').textContent = title;
+  document.querySelector('#formSubmitButton').hidden = false; document.querySelector('#formSubmitButton').textContent = action === 'new-lead' ? 'Simpan lead' : action === 'new-customer' ? 'Simpan pelanggan' : 'Simpan booking';
+  const common = `<label>Nama pelanggan<input required name="customer" placeholder="Contoh: Budi Santoso" /></label><div class="form-row"><label>Nomor WhatsApp<input required name="phone" inputmode="tel" placeholder="08xxxxxxxxxx" /></label><label>Nomor polisi<input required name="plate" placeholder="B 1234 XYZ" /></label></div>`;
+  document.querySelector('#quickFormFields').innerHTML = action === 'new-customer' ? `${common}<label>Kendaraan<input required name="vehicle" placeholder="Contoh: Toyota Avanza 2021" /></label>` : action === 'new-lead' ? `${common}<label>Kendaraan<input required name="vehicle" placeholder="Contoh: Honda Brio 2020" /></label><label>Keluhan / kebutuhan<textarea required name="need" rows="3" placeholder="Jelaskan kebutuhan pelanggan secara singkat"></textarea></label><label>Sumber lead<select required name="source"><option>WhatsApp</option><option>Instagram Ads</option><option>Referral</option><option>Datang langsung</option></select></label>` : `${common}<label>Keluhan / kebutuhan<textarea required name="need" rows="3" placeholder="Jelaskan kebutuhan pelanggan secara singkat"></textarea></label><div class="form-row"><label>Tanggal<input required name="date" type="date" value="${today}" /></label><label>Jam<input required name="time" type="time" value="10:00" /></label></div><label>Bay servis<select required name="bay"><option value="1">Bay 1</option><option value="2">Bay 2</option><option value="3">Bay 3</option></select></label>`;
+  document.querySelector('#modalBackdrop').hidden = false; document.body.style.overflow = 'hidden';
+}
+function openCustomer(index) {
+  const c = customers[index]; if (!c) return; const form = document.querySelector('#quickForm'); form.dataset.action = 'customer-detail';
+  document.querySelector('#modalTitle').textContent = 'Customer 360'; document.querySelector('#formSubmitButton').hidden = true;
+  document.querySelector('#quickFormFields').innerHTML = `<div class="customer-detail"><div class="customer-detail-head"><div class="avatar ${c[2]}">${c[1]}</div><div><h3>${escapeHtml(c[0])}</h3><p>${escapeHtml(c[3])}</p></div><span class="status-chip">${c[8]}</span></div><div class="detail-grid"><div><span>Kendaraan</span><strong>${escapeHtml(c[4])}</strong></div><div><span>Nomor polisi</span><strong>${escapeHtml(c[5])}</strong></div><div><span>Terakhir servis</span><strong>${c[6]}</strong></div><div><span>Total transaksi</span><strong>${c[7]}</strong></div></div><div class="detail-note"><strong>Ringkasan hubungan</strong><p>Riwayat pelanggan, kendaraan, percakapan, booking, dan servis siap digunakan oleh CS sebagai konteks pelayanan.</p></div></div>`;
   document.querySelector('#modalBackdrop').hidden = false; document.body.style.overflow = 'hidden';
 }
 function closeModal() { document.querySelector('#modalBackdrop').hidden = true; document.body.style.overflow = ''; }
 function showToast(title, copy) { const toast = document.querySelector('#toast'); toast.querySelector('strong').textContent = title; toast.querySelector('small').textContent = copy; toast.classList.add('show'); clearTimeout(window.toastTimer); window.toastTimer = setTimeout(() => toast.classList.remove('show'), 3200); }
 function escapeHtml(value) { const el = document.createElement('div'); el.textContent = value; return el.innerHTML; }
 
-renderDashboard(); renderConversationList(); renderChat(); renderPipeline(); renderBooking(); renderCustomers(); renderRetention(); renderSettings();
+function renderAll() { renderDashboard(); renderConversationList(); renderChat(activeConversationId); renderPipeline(); renderBooking(); renderCustomers(); renderRetention(); renderSettings(); }
+renderAll();
 
 document.addEventListener('click', (event) => {
   const nav = event.target.closest('[data-view]'); if (nav) navigate(nav.dataset.view);
@@ -196,13 +239,34 @@ document.addEventListener('click', (event) => {
   const action = event.target.closest('[data-action]'); if (action) openModal(action.dataset.action);
   const attention = event.target.closest('[data-conversation]'); if (attention) { navigate('inbox'); renderChat(attention.dataset.conversation); }
   const conversation = event.target.closest('.conversation-card'); if (conversation) { renderChat(conversation.dataset.id); document.querySelector('.inbox-layout').classList.add('chat-open'); }
-  const check = event.target.closest('.task-check'); if (check) { check.closest('.task-item').classList.toggle('done'); }
+  const check = event.target.closest('.task-check'); if (check) { const index = Number(check.dataset.task); tasks[index][3] = !tasks[index][3]; persistState(); renderDashboard(); }
+  const advance = event.target.closest('[data-advance-lead]'); if (advance) { const [columnIndex,cardIndex] = advance.dataset.advanceLead.split(':').map(Number); const [lead] = leadColumns[columnIndex].cards.splice(cardIndex,1); lead[4] = `Tindak lanjut · ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}`; leadColumns[columnIndex+1].cards.unshift(lead); persistState(); renderPipeline(); showToast('Tahap lead diperbarui', `${lead[0]} dipindahkan ke ${leadColumns[columnIndex+1].title}.`); }
+  const customerRow = event.target.closest('[data-customer-index]'); if (customerRow) openCustomer(Number(customerRow.dataset.customerIndex));
+  if (event.target.closest('[data-export-data]')) exportData();
+  if (event.target.closest('[data-reset-data]') && confirm('Reset seluruh perubahan lokal dan kembali ke data demo awal?')) { resetDemoState(); showToast('Data demo dipulihkan', 'Semua perubahan lokal telah direset.'); }
 });
 document.querySelector('#mobileMenu').addEventListener('click', () => document.querySelector('#sidebar').classList.toggle('open'));
 document.querySelector('#conversationSearch').addEventListener('input', (e) => renderConversationList(e.target.value));
 document.querySelector('#customerSearch').addEventListener('input', (e) => renderCustomers(e.target.value));
 document.querySelector('#closeModal').addEventListener('click', closeModal); document.querySelector('#cancelModal').addEventListener('click', closeModal);
 document.querySelector('#modalBackdrop').addEventListener('click', (e) => { if (e.target.id === 'modalBackdrop') closeModal(); });
-document.querySelector('#quickForm').addEventListener('submit', (e) => { e.preventDefault(); const data = new FormData(e.currentTarget); closeModal(); e.currentTarget.reset(); showToast('Booking berhasil dibuat', `${data.get('customer')} dijadwalkan dan siap dikonfirmasi.`); });
+document.querySelector('#quickForm').addEventListener('submit', (e) => {
+  e.preventDefault(); const data = new FormData(e.currentTarget); const action = e.currentTarget.dataset.action; const name = data.get('customer');
+  if (action === 'new-lead') {
+    leadColumns[0].cards.unshift([name, data.get('need'), data.get('vehicle'), 70, 'Respons · Hari ini']);
+    tasks.unshift([`Respons lead ${name}`, `Lead baru · ${data.get('vehicle')}`, 'Hari ini', false]); renderPipeline();
+    showToast('Lead berhasil ditambahkan', `${name} masuk ke tahap Baru.`);
+  } else if (action === 'new-customer') {
+    const initials = name.split(/\s+/).slice(0,2).map((part) => part[0]).join('').toUpperCase(); customers.unshift([name,initials,'avatar-green',data.get('phone'),data.get('vehicle'),data.get('plate'),'Belum servis','—','Aktif']); renderCustomers();
+    showToast('Pelanggan berhasil ditambahkan', `${name} tersedia di Customer 360.`);
+  } else {
+    const vehicle = data.get('plate'); appointments.push({time:data.get('time'),name,job:`${data.get('need')} · ${vehicle}`,status:'Belum konfirmasi',bay:Number(data.get('bay')),date:data.get('date'),tone:'amber'});
+    if (!customers.some((c) => c[0].toLowerCase() === name.toLowerCase())) { const initials = name.split(/\s+/).slice(0,2).map((part) => part[0]).join('').toUpperCase(); customers.unshift([name,initials,'avatar-green',data.get('phone'),'Kendaraan belum dilengkapi',vehicle,'Belum servis','—','Prospek']); }
+    tasks.unshift([`Konfirmasi booking ${name}`, `${data.get('date')} · ${data.get('time')}`, 'Hari ini', false]); renderBooking(); renderDashboard();
+    showToast('Booking berhasil dibuat', `${name} dijadwalkan pukul ${data.get('time')}.`);
+  }
+  persistState(); closeModal(); e.currentTarget.reset();
+});
+function exportData() { const blob = new Blob([JSON.stringify({ exportedAt:new Date().toISOString(), conversations, appointments, tasks, leadColumns, customers },null,2)],{type:'application/json'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `mbacs-export-${new Date().toISOString().slice(0,10)}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data berhasil diekspor','File JSON telah diunduh.'); }
 document.querySelector('#globalSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.value.trim()) { navigate('customers'); document.querySelector('#customerSearch').value = e.target.value; renderCustomers(e.target.value); } });
 document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); document.querySelector('#globalSearch').focus(); } if (e.key === 'Escape') closeModal(); });

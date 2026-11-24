@@ -24,6 +24,14 @@ python3 -m http.server 4173 -d dist
 
 Lalu buka `http://localhost:4173`.
 
+Pemeriksaan runtime ringan dapat dijalankan dengan:
+
+```bash
+node scripts/smoke-ui.mjs
+```
+
 ## Status
 
-Data pada antarmuka masih berupa data contoh untuk validasi alur dan desain. Integrasi PostgreSQL, n8n, WhatsApp Business Cloud API, backend, dan autentikasi akan menjadi tahap implementasi berikutnya.
+Versi saat ini menggunakan data contoh yang dapat diubah dan disimpan di `localStorage` browser. Pengguna dapat menambahkan booking, lead, dan pelanggan; memajukan lead; menyelesaikan tugas; membalas pesan; membuka Customer 360; serta mengekspor atau mereset data demo.
+
+Penyimpanan browser ini ditujukan untuk validasi MVP. Integrasi PostgreSQL, n8n, WhatsApp Business Cloud API, backend, dan autentikasi tetap menjadi tahap implementasi produksi berikutnya.

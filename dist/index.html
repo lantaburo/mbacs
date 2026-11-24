@@ -195,11 +195,8 @@
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-head"><div><p class="eyebrow">MBACS</p><h2 id="modalTitle">Buat booking baru</h2></div><button class="icon-button" id="closeModal" aria-label="Tutup"><span data-icon="close"></span></button></div>
         <form id="quickForm">
-          <label>Nama pelanggan<input required name="customer" placeholder="Contoh: Budi Santoso" /></label>
-          <div class="form-row"><label>Nomor WhatsApp<input required name="phone" placeholder="08xxxxxxxxxx" /></label><label>Nomor polisi<input required name="plate" placeholder="B 1234 XYZ" /></label></div>
-          <label>Keluhan / kebutuhan<textarea required name="need" rows="3" placeholder="Jelaskan kebutuhan pelanggan secara singkat"></textarea></label>
-          <div class="form-row"><label>Tanggal<input required name="date" type="date" value="2026-11-26" /></label><label>Jam<input required name="time" type="time" value="10:00" /></label></div>
-          <div class="modal-actions"><button type="button" class="secondary-button" id="cancelModal">Batal</button><button class="primary-button" type="submit">Simpan booking</button></div>
+          <div id="quickFormFields"></div>
+          <div class="modal-actions"><button type="button" class="secondary-button" id="cancelModal">Batal</button><button class="primary-button" id="formSubmitButton" type="submit">Simpan booking</button></div>
         </form>
       </div>
     </div>
