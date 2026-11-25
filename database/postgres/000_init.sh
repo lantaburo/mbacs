@@ -18,3 +18,4 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'n8n_db') \gexec
 EOSQL
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname mbacs_db --file /opt/mbacs/001_schema.sql
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname mbacs_db --file /opt/mbacs/002_workshop_snapshots.sql

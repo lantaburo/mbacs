@@ -1,0 +1,40 @@
+(mbacs_auth) {
+  basic_auth {
+    {$MBACS_BASIC_AUTH_USER} {$MBACS_BASIC_AUTH_HASH}
+  }
+}
+
+{$MBACS_DOMAIN:localhost} {
+  encode zstd gzip
+  import mbacs_auth
+
+  handle /health {
+    reverse_proxy api:3000
+  }
+
+  handle /api* {
+    reverse_proxy api:3000 {
+      header_up X-MBACS-Proxy-Token "{$MBACS_PROXY_TOKEN}"
+    }
+  }
+
+  handle /server/* {
+    respond 404
+  }
+
+  handle /.openai/* {
+    respond 404
+  }
+
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    file_server
+  }
+}
+
+{$N8N_DOMAIN:n8n.localhost} {
+  encode zstd gzip
+  import mbacs_auth
+  reverse_proxy n8n:5678
+}

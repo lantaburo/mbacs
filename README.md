@@ -17,9 +17,10 @@ Versi ini menyediakan antarmuka responsif dan backend Site dengan penyimpanan D1
 ## Arsitektur
 
 - **Dashboard:** HTML, CSS, dan JavaScript buildless di `dist/`.
-- **Backend Site:** Cloudflare Worker di `src/worker.mjs`.
+- **Backend portabel:** Node.js di `src/api/` dengan REST API dan PostgreSQL.
+- **Backend Site:** Cloudflare Worker di `src/worker.mjs` untuk deployment ChatGPT Site yang sudah ada.
 - **Penyimpanan Site:** D1 melalui binding `DB`, dengan sinkronisasi optimistis dan fallback `localStorage`.
-- **Target produksi VPS:** PostgreSQL 16 dan n8n melalui `docker-compose.yml`.
+- **Target produksi VPS:** Caddy, MBACS API, PostgreSQL 16, dan n8n melalui `docker-compose.yml`.
 - **Skema bisnis:** `database/postgres/001_schema.sql` mencakup workshop, pelanggan, kendaraan, lead, percakapan, booking, servis, retensi, AI, dan audit.
 
 ## Menjalankan dashboard secara lokal
@@ -39,18 +40,35 @@ node scripts/smoke-ui.mjs
 node --test tests/domain.test.mjs
 ```
 
-## Menjalankan PostgreSQL dan n8n
+## Menjalankan stack lengkap secara lokal
 
-Salin `.env.example` menjadi `.env`, ganti seluruh kata sandi dan encryption key, lalu jalankan:
+Salin `.env.example` menjadi `.env`, ganti seluruh kata sandi, `MBACS_PROXY_TOKEN`, dan encryption key, lalu jalankan:
 
 ```bash
 docker compose up -d
 ```
 
-PostgreSQL membuat database dan role terpisah: `mbacs_db`/`mbacs_app` untuk CRM serta `n8n_db`/`n8n_app` untuk workflow.
+Dashboard tersedia di `http://localhost:8080`, sedangkan n8n tersedia di `http://n8n.localhost:8080`. PostgreSQL hanya dipublikasikan pada loopback host dan membuat database serta role terpisah: `mbacs_db`/`mbacs_app` untuk CRM serta `n8n_db`/`n8n_app` untuk workflow.
+
+API menyediakan dua kontrak:
+
+- `POST /api` untuk sinkronisasi dashboard yang sudah ada;
+- `/api/v1/workshops/...` untuk integrasi portabel, termasuk n8n.
+
+Reverse proxy menyisipkan token internal ke API. Token tidak pernah dikirim ke JavaScript browser. Caddy juga mewajibkan Basic Auth untuk dashboard, API, dan n8n selama login multi-pengguna belum diaktifkan.
+
+Panduan VPS, HTTPS, firewall, backup, restore, dan migrasi tersedia di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Kontrak integrasi untuk n8n dan layanan lain tersedia di [`docs/API.md`](docs/API.md).
+
+Untuk menjalankan pemeriksaan proyek:
+
+```bash
+npm install
+npm run check
+```
 
 ## Status
 
 Data dashboard disinkronkan ke D1 untuk pengguna Site yang telah masuk. Jika backend belum tersedia—misalnya pada preview statis lokal—aplikasi otomatis memakai `localStorage` tanpa menghilangkan fungsi utama.
 
-PostgreSQL dan n8n sudah memiliki fondasi lokal, tetapi WhatsApp Business Cloud API, OpenAI API, serta deployment VPS masih memerlukan kredensial dan konfigurasi lingkungan milik pengguna.
+Backend PostgreSQL dan paket Docker tidak terikat pada penyedia VPS. WhatsApp Business Cloud API, OpenAI API, login multi-pengguna, serta domain produksi masih memerlukan kredensial dan konfigurasi lingkungan milik pengguna.

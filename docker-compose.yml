@@ -9,14 +9,39 @@ services:
       MBACS_DB_PASSWORD: ${MBACS_DB_PASSWORD}
       N8N_DB_PASSWORD: ${N8N_DB_PASSWORD}
     ports:
-      - "${MBACS_POSTGRES_PORT:-5432}:5432"
+      - "${MBACS_POSTGRES_BIND:-127.0.0.1}:${MBACS_POSTGRES_PORT:-5432}:5432"
     volumes:
       - mbacs_postgres_data:/var/lib/postgresql/data
       - ./database/postgres/000_init.sh:/docker-entrypoint-initdb.d/000_init.sh:ro
       - ./database/postgres/001_schema.sql:/opt/mbacs/001_schema.sql:ro
+      - ./database/postgres/002_workshop_snapshots.sql:/opt/mbacs/002_workshop_snapshots.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: mbacs_db
+      PGUSER: mbacs_app
+      PGPASSWORD: ${MBACS_DB_PASSWORD}
+      MBACS_PROXY_TOKEN: ${MBACS_PROXY_TOKEN}
+      MBACS_OWNER_KEY: ${MBACS_OWNER_KEY:-local-owner}
+      MBACS_DB_POOL_SIZE: ${MBACS_DB_POOL_SIZE:-10}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
       timeout: 5s
       retries: 12
 
@@ -37,11 +62,42 @@ services:
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Jakarta}
       TZ: ${GENERIC_TIMEZONE:-Asia/Jakarta}
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-    ports:
-      - "${MBACS_N8N_PORT:-5678}:5678"
+      N8N_HOST: ${N8N_HOST:-n8n.localhost}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      N8N_EDITOR_BASE_URL: ${N8N_PUBLIC_URL:-http://n8n.localhost:8080}
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://n8n.localhost:8080}
+      N8N_PROXY_HOPS: 1
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      MBACS_INTERNAL_API_URL: http://api:3000/api/v1
+      MBACS_PROXY_TOKEN: ${MBACS_PROXY_TOKEN}
     volumes:
       - mbacs_n8n_data:/home/node/.n8n
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      n8n:
+        condition: service_started
+    environment:
+      MBACS_DOMAIN: ${MBACS_DOMAIN:-http://localhost}
+      N8N_DOMAIN: ${N8N_DOMAIN:-http://n8n.localhost}
+      MBACS_PROXY_TOKEN: ${MBACS_PROXY_TOKEN}
+      MBACS_BASIC_AUTH_USER: ${MBACS_BASIC_AUTH_USER}
+      MBACS_BASIC_AUTH_HASH: ${MBACS_BASIC_AUTH_HASH}
+    ports:
+      - "${MBACS_HTTP_PORT:-8080}:80"
+      - "${MBACS_HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist:/srv:ro
+      - mbacs_caddy_data:/data
+      - mbacs_caddy_config:/config
 
 volumes:
   mbacs_postgres_data:
   mbacs_n8n_data:
+  mbacs_caddy_data:
+  mbacs_caddy_config:
