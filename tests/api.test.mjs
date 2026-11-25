@@ -12,6 +12,7 @@ const repository = {
   state: async (owner, id) => { calls.push(["state", owner, id]); return { crm: {}, revision: 2 }; },
   sync: async (owner, id, revision, data) => { calls.push(["sync", owner, id, revision, data]); return { synced: true, revision: revision + 1 }; },
   mutate: async (owner, id, name, args) => { calls.push(["mutate", owner, id, name, args]); return { revision: 3 }; },
+  receiveWhatsApp: async (owner, id, payload) => { calls.push(["whatsapp", owner, id, payload]); return { accepted: true, duplicate: false }; },
 };
 
 async function invoke(path, { method = "GET", headers = {}, payload } = {}) {
@@ -63,4 +64,17 @@ test("REST state mendukung optimistic concurrency", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.json.result.revision, 5);
   assert.deepEqual(calls[0], ["sync", "test-owner", workshopId, 4, { customers: [] }]);
+});
+
+test("webhook WhatsApp diteruskan ke ingestion idempoten", async () => {
+  calls.length = 0;
+  const payload = { externalId: "wamid.test-1", from: "081200009911", body: "Halo bengkel" };
+  const response = await invoke(`/api/v1/workshops/${workshopId}/webhooks/whatsapp`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-mbacs-proxy-token": "test-secret" },
+    payload,
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.json.result.accepted, true);
+  assert.deepEqual(calls[0], ["whatsapp", "test-owner", workshopId, payload]);
 });

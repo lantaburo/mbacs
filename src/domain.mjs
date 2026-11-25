@@ -95,6 +95,53 @@ export function action(record, name, args = {}, actor = "") {
       audit(record, "message.drafted", actor, conversation.name);
       return { conversation: conversation.id, saved: true };
     }
+    case "receive_message": {
+      const senderPhone = phone(args.from);
+      const body = need(clean(args.body, 4000), "Isi pesan wajib diisi.");
+      const externalThreadId = clean(args.externalThreadId, 160) || senderPhone;
+      let conversation = crm.conversations.find((item) => item.phone === senderPhone || item.externalThreadId === externalThreadId);
+      const created = !conversation;
+      if (!conversation) {
+        const nextId = crm.conversations.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+        const senderName = clean(args.name, 120) || senderPhone;
+        conversation = {
+          id: nextId,
+          name: senderName,
+          initials: initials(senderName),
+          tone: "avatar-green",
+          time: "Baru saja",
+          unread: 0,
+          preview: "",
+          status: "Perlu respons",
+          vehicle: clean(args.vehicle, 120) || "Kendaraan belum diketahui",
+          plate: clean(args.plate, 24).toUpperCase() || "—",
+          source: "WhatsApp",
+          score: 60,
+          phone: senderPhone,
+          externalThreadId,
+          messages: []
+        };
+        crm.conversations.unshift(conversation);
+        crm.conversations = crm.conversations.slice(0, 500);
+      }
+      conversation.messages = Array.isArray(conversation.messages) ? conversation.messages.slice(-1999) : [];
+      conversation.messages.push(["customer", body, clean(args.receivedLabel, 40) || "Baru saja"]);
+      conversation.preview = body;
+      conversation.time = "Baru saja";
+      conversation.unread = Math.max(0, Number(conversation.unread) || 0) + 1;
+      conversation.status = "Perlu respons";
+
+      if (created && crm.leadColumns[0]?.cards) {
+        const needText = clean(args.need, 500) || body;
+        conversation.score = Math.max(0, Math.min(100, Number(args.score) || 60));
+        crm.leadColumns[0].cards.unshift([conversation.name, needText, conversation.vehicle, conversation.score, "Respons · Hari ini"]);
+        crm.leadColumns[0].cards = crm.leadColumns[0].cards.slice(0, 1000);
+        crm.tasks = boundedArray(crm.tasks, 999);
+        crm.tasks.unshift([`Respons WhatsApp ${conversation.name}`, `Lead baru · ${conversation.vehicle}`, "Hari ini", false]);
+      }
+      audit(record, "message.received", actor, senderPhone);
+      return { conversation: conversation.id, created, unread: conversation.unread };
+    }
     case "advance_lead": {
       const from = Number(args.from), index = Number(args.index);
       need(Number.isInteger(from) && from >= 0 && from < crm.leadColumns.length - 1, "Tahap asal tidak valid.");

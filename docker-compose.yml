@@ -68,6 +68,7 @@ services:
       WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://n8n.localhost:8080}
       N8N_PROXY_HOPS: 1
       N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       MBACS_INTERNAL_API_URL: http://api:3000/api/v1
       MBACS_PROXY_TOKEN: ${MBACS_PROXY_TOKEN}
     volumes:

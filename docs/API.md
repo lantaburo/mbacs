@@ -21,6 +21,7 @@ POST /api/v1/workshops/:id/actions/lead
 POST /api/v1/workshops/:id/actions/appointment
 POST /api/v1/workshops/:id/actions/message
 POST /api/v1/workshops/:id/actions/advance_lead
+POST /api/v1/workshops/:id/webhooks/whatsapp
 ```
 
 `PUT state` menggunakan optimistic concurrency. Kirim `revision` terakhir bersama snapshot CRM:
@@ -49,3 +50,5 @@ curl -sS \
 ```
 
 Kontrak lama `POST /api` tetap tersedia untuk dashboard dan ChatGPT Site. Integrasi baru sebaiknya menggunakan `/api/v1`.
+
+Webhook WhatsApp memerlukan `externalId`, `from`, dan `body`. `externalId` disimpan pada tabel event dan dipakai sebagai kunci idempotensi, sehingga pengiriman ulang event yang sama tidak membuat percakapan ganda.

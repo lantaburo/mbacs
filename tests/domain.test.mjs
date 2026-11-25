@@ -42,3 +42,19 @@ test('aksi pesan memperbarui konteks percakapan', () => {
   assert.equal(record.crm.conversations[0].unread, 0);
   assert.equal(record.crm.conversations[0].messages[0][0], 'agent');
 });
+
+test('webhook WhatsApp membuat percakapan, lead, dan tugas', () => {
+  const record = workshop({ name: 'MBACS Test', seed: seed() });
+  const result = action(record, 'receive_message', {
+    from: '0812 0000 9911',
+    name: 'Rina Wijaya',
+    body: 'Mobil saya perlu servis rutin.',
+    vehicle: 'Toyota Calya 2021',
+  }, 'whatsapp-webhook');
+
+  assert.equal(result.created, true);
+  assert.equal(record.crm.conversations[0].phone, '+6281200009911');
+  assert.equal(record.crm.conversations[0].messages[0][1], 'Mobil saya perlu servis rutin.');
+  assert.equal(record.crm.leadColumns[0].cards[0][0], 'Rina Wijaya');
+  assert.match(record.crm.tasks[0][0], /Rina Wijaya/);
+});

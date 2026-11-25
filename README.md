@@ -59,6 +59,7 @@ Reverse proxy menyisipkan token internal ke API. Token tidak pernah dikirim ke J
 
 Panduan VPS, HTTPS, firewall, backup, restore, dan migrasi tersedia di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 Kontrak integrasi untuk n8n dan layanan lain tersedia di [`docs/API.md`](docs/API.md).
+Petunjuk import workflow dan pengujian WhatsApp tersedia di [`docs/AUTOMATION.md`](docs/AUTOMATION.md).
 
 Untuk menjalankan pemeriksaan proyek:
 
@@ -71,4 +72,4 @@ npm run check
 
 Data dashboard disinkronkan ke D1 untuk pengguna Site yang telah masuk. Jika backend belum tersedia—misalnya pada preview statis lokal—aplikasi otomatis memakai `localStorage` tanpa menghilangkan fungsi utama.
 
-Backend PostgreSQL dan paket Docker tidak terikat pada penyedia VPS. WhatsApp Business Cloud API, OpenAI API, login multi-pengguna, serta domain produksi masih memerlukan kredensial dan konfigurasi lingkungan milik pengguna.
+Backend PostgreSQL dan paket Docker tidak terikat pada penyedia VPS. Simulator WhatsApp dan workflow draft reminder tersedia untuk pengujian tanpa akun Meta. Pengiriman WhatsApp nyata, OpenAI API, login multi-pengguna, serta domain produksi masih memerlukan kredensial dan konfigurasi lingkungan milik pengguna.

@@ -92,6 +92,9 @@ async function versioned(repository, ownerKey, request, url) {
     if (!mutationActions.has(name)) throw new HttpError("Tindakan API tidak ditemukan.", 404);
     return repository.mutate(ownerKey, workshopId(id), name, await body(request));
   }
+  if (parts.length === 6 && parts[2] === "workshops" && parts[4] === "webhooks" && parts[5] === "whatsapp" && request.method === "POST") {
+    return repository.receiveWhatsApp(ownerKey, workshopId(id), await body(request));
+  }
   throw new HttpError("Endpoint tidak ditemukan.", 404);
 }
 

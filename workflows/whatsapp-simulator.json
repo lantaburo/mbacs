@@ -1,0 +1,110 @@
+{
+  "name": "MBACS - WhatsApp Simulator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mbacs-whatsapp-simulator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0e863d5c-1ac0-4a45-9433-b247782b59de",
+      "name": "Webhook Simulator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-700, 0],
+      "webhookId": "2f59a3aa-495c-40ea-95ec-2786d7e36851"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nreturn [{ json: {\n  externalId: input.externalId || input.message_id || `sim-${Date.now()}-${Math.random().toString(16).slice(2)}`,\n  from: input.from || input.phone || '081200009911',\n  name: input.name || input.profile_name || 'Pelanggan WhatsApp',\n  body: input.body || input.message || input.text || 'Halo bengkel',\n  vehicle: input.vehicle || '',\n  plate: input.plate || '',\n  receivedLabel: 'Baru saja'\n} }];"
+      },
+      "id": "f6e79780-a67c-446f-9c36-d3fe32955c5f",
+      "name": "Normalisasi Pesan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.MBACS_INTERNAL_API_URL + '/workshops' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-MBACS-Proxy-Token",
+              "value": "={{ $env.MBACS_PROXY_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4f07e216-7c06-4679-910a-04f1596a4098",
+      "name": "Cari Workshop MBACS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-250, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MBACS_INTERNAL_API_URL + '/workshops/' + $node[\"Cari Workshop MBACS\"].json.result[0].id + '/webhooks/whatsapp' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-MBACS-Proxy-Token",
+              "value": "={{ $env.MBACS_PROXY_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $node[\"Normalisasi Pesan\"].json }}",
+        "options": {}
+      },
+      "id": "e307b110-0b76-47e0-884f-d8bca7b64563",
+      "name": "Simpan Pesan MBACS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-10, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, result: $json.result } }}",
+        "options": {}
+      },
+      "id": "fc800cde-e93e-43fd-b4fc-bdc28e60eec5",
+      "name": "Respons Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [230, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Simulator": {
+      "main": [[{"node": "Normalisasi Pesan", "type": "main", "index": 0}]]
+    },
+    "Normalisasi Pesan": {
+      "main": [[{"node": "Cari Workshop MBACS", "type": "main", "index": 0}]]
+    },
+    "Cari Workshop MBACS": {
+      "main": [[{"node": "Simpan Pesan MBACS", "type": "main", "index": 0}]]
+    },
+    "Simpan Pesan MBACS": {
+      "main": [[{"node": "Respons Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Jakarta"
+  },
+  "versionId": "ee673f8d-734b-471b-b4ca-dce76024fe0a",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

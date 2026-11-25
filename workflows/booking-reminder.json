@@ -1,0 +1,104 @@
+{
+  "name": "MBACS - Draft Pengingat Booking",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "days", "triggerAtHour": 8}]
+        }
+      },
+      "id": "f1b9fabe-c52e-40d9-b409-4c2031dc35f7",
+      "name": "Setiap Hari 08.00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-700, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.MBACS_INTERNAL_API_URL + '/workshops' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "X-MBACS-Proxy-Token", "value": "={{ $env.MBACS_PROXY_TOKEN }}"}]
+        },
+        "options": {}
+      },
+      "id": "1c71b983-4e60-482c-ab86-93bccde93b23",
+      "name": "Daftar Workshop",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const workshops = $json.result || [];\nif (!workshops.length) throw new Error('Belum ada workshop MBACS.');\nreturn [{ json: { workshopId: workshops[0].id } }];"
+      },
+      "id": "480cdf03-7c77-4d37-af53-08049330fdbf",
+      "name": "Pilih Workshop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-260, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.MBACS_INTERNAL_API_URL + '/workshops/' + $json.workshopId + '/state' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "X-MBACS-Proxy-Token", "value": "={{ $env.MBACS_PROXY_TOKEN }}"}]
+        },
+        "options": {}
+      },
+      "id": "04af725e-f8e2-44d7-a84f-02609f011c4b",
+      "name": "Ambil State CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-30, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const state = $json.result;\nconst workshopId = $('Pilih Workshop').first().json.workshopId;\nconst tomorrow = new Date();\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst target = tomorrow.toISOString().slice(0, 10);\nconst conversations = state.crm.conversations || [];\nreturn (state.crm.appointments || [])\n  .filter(a => a.date === target && !['Dibatalkan', 'Selesai'].includes(a.status))\n  .map(a => {\n    const conversation = conversations.find(c => String(c.name).toLowerCase() === String(a.name).toLowerCase());\n    if (!conversation) return null;\n    return { json: {\n      workshopId,\n      conversation: String(conversation.id),\n      body: `Pengingat booking: ${a.name} dijadwalkan besok pukul ${a.time} untuk ${a.job}. Mohon konfirmasi kehadiran.`\n    } };\n  })\n  .filter(Boolean);"
+      },
+      "id": "bb82a93e-a397-4c72-8c84-d2afde0a3c7f",
+      "name": "Siapkan Draft Reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MBACS_INTERNAL_API_URL + '/workshops/' + $json.workshopId + '/actions/message' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "X-MBACS-Proxy-Token", "value": "={{ $env.MBACS_PROXY_TOKEN }}"}]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { conversation: $json.conversation, body: $json.body } }}",
+        "options": {}
+      },
+      "id": "190ff365-d489-4eb6-905b-1c0c0a45b1c2",
+      "name": "Simpan Draft Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Setiap Hari 08.00": {"main": [[{"node": "Daftar Workshop", "type": "main", "index": 0}]]},
+    "Daftar Workshop": {"main": [[{"node": "Pilih Workshop", "type": "main", "index": 0}]]},
+    "Pilih Workshop": {"main": [[{"node": "Ambil State CRM", "type": "main", "index": 0}]]},
+    "Ambil State CRM": {"main": [[{"node": "Siapkan Draft Reminder", "type": "main", "index": 0}]]},
+    "Siapkan Draft Reminder": {"main": [[{"node": "Simpan Draft Reminder", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Jakarta"
+  },
+  "versionId": "6bd983bf-1ac4-488e-b3b7-eb2dabaa552c",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

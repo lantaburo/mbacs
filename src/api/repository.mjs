@@ -1,5 +1,5 @@
 import pg from "pg";
-import { action, sanitizeCRM, workshop } from "../domain.mjs";
+import { action, clean, sanitizeCRM, workshop } from "../domain.mjs";
 
 const { Pool } = pg;
 
@@ -144,6 +144,62 @@ export function createRepository({ connectionString, pool: suppliedPool } = {}) 
         );
         await client.query("COMMIT");
         return { result, revision: Number(updated.rows[0].revision) };
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
+    async receiveWhatsApp(ownerKey, workshopId, payload = {}) {
+      const externalId = clean(payload.externalId, 200);
+      if (!externalId) throw new RepositoryError("externalId WhatsApp wajib diisi.");
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const event = await client.query(
+          `INSERT INTO webhook_events(workshop_id, provider, external_id, event_type, payload, status)
+           SELECT $1, 'whatsapp', $2, 'message', $3::jsonb, 'received'
+            WHERE EXISTS (
+              SELECT 1 FROM workshop_snapshots WHERE workshop_id = $1 AND owner_key = $4
+            )
+           ON CONFLICT (provider, external_id) DO NOTHING
+           RETURNING id`,
+          [workshopId, externalId, JSON.stringify(payload), ownerKey],
+        );
+        if (!event.rowCount) {
+          const access = await client.query(
+            "SELECT 1 FROM workshop_snapshots WHERE workshop_id = $1 AND owner_key = $2",
+            [workshopId, ownerKey],
+          );
+          if (!access.rowCount) throw new RepositoryError("Workshop tidak ditemukan.", 404);
+          await client.query("COMMIT");
+          return { accepted: true, duplicate: true, externalId };
+        }
+
+        const selected = await client.query(
+          `SELECT data
+             FROM workshop_snapshots
+            WHERE workshop_id = $1 AND owner_key = $2
+            FOR UPDATE`,
+          [workshopId, ownerKey],
+        );
+        const record = selected.rows[0].data;
+        const result = action(record, "receive_message", payload, "whatsapp-webhook");
+        const updated = await client.query(
+          `UPDATE workshop_snapshots
+              SET data = $1::jsonb, revision = revision + 1, updated_at = now()
+            WHERE workshop_id = $2
+            RETURNING revision`,
+          [JSON.stringify(record), workshopId],
+        );
+        await client.query(
+          "UPDATE webhook_events SET status = 'processed', processed_at = now() WHERE id = $1",
+          [event.rows[0].id],
+        );
+        await client.query("COMMIT");
+        return { accepted: true, duplicate: false, externalId, ...result, revision: Number(updated.rows[0].revision) };
       } catch (error) {
         await client.query("ROLLBACK");
         throw error;
