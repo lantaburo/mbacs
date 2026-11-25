@@ -112,6 +112,77 @@ let customers = [
 const STORAGE_KEY = 'mbacs.crm.v2';
 const seedState = JSON.parse(JSON.stringify({ conversations, appointments, tasks, leadColumns, customers }));
 let activeConversationId = 1;
+const remoteStore = { workshop: '', revision: 0, ready: false, syncing: false, timer: null, change: 0 };
+
+function snapshot() { return { conversations, appointments, tasks, leadColumns, customers }; }
+
+function setSyncStatus(text, healthy = true) {
+  const el = document.querySelector('#syncStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = healthy ? '#91e0b3' : '#f1b39f';
+}
+
+async function callAPI(action, args = {}) {
+  const response = await fetch('/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, args }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) { const error = new Error(payload.error || 'API MBACS tidak dapat diakses.'); error.status = response.status; throw error; }
+  return payload.result;
+}
+
+function applyRemoteCRM(crm) {
+  if (!crm) return;
+  conversations = Array.isArray(crm.conversations) ? crm.conversations : conversations;
+  appointments = Array.isArray(crm.appointments) ? crm.appointments : appointments;
+  tasks = Array.isArray(crm.tasks) ? crm.tasks : tasks;
+  leadColumns = Array.isArray(crm.leadColumns) && crm.leadColumns.length ? crm.leadColumns : leadColumns;
+  customers = Array.isArray(crm.customers) ? crm.customers : customers;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...snapshot(), savedAt: new Date().toISOString() }));
+}
+
+async function initializeRemote() {
+  try {
+    setSyncStatus('Menghubungkan penyimpanan cloud…');
+    const workspaces = await callAPI('list');
+    const selected = workspaces[0] || await callAPI('create', { name: 'MBACS Workshop', seed: snapshot() });
+    remoteStore.workshop = selected.id;
+    const state = await callAPI('state', { workshop: selected.id });
+    remoteStore.revision = state.revision;
+    applyRemoteCRM(state.crm);
+    remoteStore.ready = true;
+    renderAll();
+    setSyncStatus('Data cloud tersinkron');
+  } catch (error) {
+    setSyncStatus(error.status === 401 ? 'Mode lokal · masuk untuk sinkronisasi' : 'Mode lokal · cloud belum tersedia', false);
+    console.warn('Sinkronisasi cloud MBACS belum aktif.', error);
+  }
+}
+
+function scheduleRemoteSync() {
+  if (!remoteStore.ready) return;
+  remoteStore.change += 1;
+  clearTimeout(remoteStore.timer);
+  remoteStore.timer = setTimeout(syncRemote, 700);
+  setSyncStatus('Menyimpan perubahan…');
+}
+
+async function syncRemote() {
+  if (!remoteStore.ready || remoteStore.syncing) return;
+  remoteStore.syncing = true;
+  const change = remoteStore.change;
+  try {
+    const result = await callAPI('sync', { workshop: remoteStore.workshop, revision: remoteStore.revision, data: snapshot() });
+    remoteStore.revision = result.revision;
+    setSyncStatus('Data cloud tersinkron');
+  } catch (error) {
+    if (error.status === 409) remoteStore.ready = false;
+    setSyncStatus(error.status === 409 ? 'Konflik data · muat ulang halaman' : 'Gagal sinkron · data lokal aman', false);
+    console.warn('Perubahan belum tersinkron.', error);
+  } finally {
+    remoteStore.syncing = false;
+    if (remoteStore.ready && remoteStore.change !== change) scheduleRemoteSync();
+  }
+}
 
 function restoreState() {
   try {
@@ -129,6 +200,7 @@ function restoreState() {
 
 function persistState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ conversations, appointments, tasks, leadColumns, customers, savedAt: new Date().toISOString() }));
+  scheduleRemoteSync();
 }
 
 function resetDemoState() {
@@ -232,6 +304,7 @@ function escapeHtml(value) { const el = document.createElement('div'); el.textCo
 
 function renderAll() { renderDashboard(); renderConversationList(); renderChat(activeConversationId); renderPipeline(); renderBooking(); renderCustomers(); renderRetention(); renderSettings(); }
 renderAll();
+initializeRemote();
 
 document.addEventListener('click', (event) => {
   const nav = event.target.closest('[data-view]'); if (nav) navigate(nav.dataset.view);

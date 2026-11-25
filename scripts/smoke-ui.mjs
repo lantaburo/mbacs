@@ -7,6 +7,7 @@ class FakeElement {
     this.dataset = {};
     this.hidden = false;
     this.value = '';
+    this.style = {};
     this.listeners = {};
     this.classList = { add() {}, remove() {}, toggle() {} };
   }
@@ -36,7 +37,7 @@ const getElement = (selector) => {
 
 const localData = new Map();
 const context = vm.createContext({
-  console,
+  console: { ...console, warn() {} },
   Blob,
   URL,
   FormData,
@@ -44,6 +45,7 @@ const context = vm.createContext({
   setTimeout,
   clearTimeout,
   confirm: () => true,
+  fetch: async () => ({ ok: false, status: 401, json: async () => ({ error: 'Mode test lokal' }) }),
   localStorage: {
     getItem: (key) => localData.get(key) ?? null,
     setItem: (key, value) => localData.set(key, value),

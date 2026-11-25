@@ -1,102 +1,110 @@
-import { action,business,clean,writeActions,adminActions } from "./domain.mjs";
+import { action,workshop,clean,readOnlyActions,ownerActions } from "./domain.mjs";
 import { assets } from "./assets.mjs";
 
-const methods={
-  list:["Daftar profil bisnis yang dapat diakses",[]],
-  create:["Buat profil bisnis dari template",["name","type"],["region","phone","language","tone","greeting","flow"]],
-  state:["Baca kampanye, kontak, tiket, contoh, dan pengaturan bisnis",["business"]],
-  save_profile:["Perbarui profil bisnis sebagai admin",["business"],["name","type","region","hours","catalog","price","availability","faq","policy","brand","language","tone","greeting","handoff","flow","phone","opener","mode","connection","testimonials","autoCategories"],["confirm"]],
-  grant:["Kelola akses bisnis berdasarkan email akun. role: admin, agent, atau remove",["business","email","role"]],
-  campaign:["Buat draf kampanye. Riset di web dahulu jika tersedia, masukkan temuan, URL, tanggal, wilayah, dan asumsi dalam research. Harga dan biaya satuan IDR.",["business","product","region"],["capacity","research","cta","mode","opener"],[],["hpp","current","budget","pack","discount","fee"]],
-  approve:["Setujui landing page setelah CTA diuji. Gunakan hanya setelah persetujuan pengguna.",["business","id"],[],["tested"]],
-  intake:["Catat formulir dengan ID kiriman tetap saat retry. UTM memiliki source, medium, campaign, term, content.",["business","eventId"],["campaign","name","phone","email","source","message"],["consent"],[],["utm"]],
-  wa_link:["Buat tautan WhatsApp dengan pesan pembuka yang dapat diedit",["business"],["message"]],
-  simulate:["Simulasikan respons CS tanpa menyimpan pesan atau menghubungi pelanggan",["business","message"]],
-  receive:["Simulasikan pesan WhatsApp masuk, jalankan pencocokan kontak dan catat draf/tiket",["business","recipient","phone","eventId","message"],["order"]],
-  contact:["Ubah tahap, produk, penanggung jawab, atau tindak lanjut kontak",["business","id"],["stage","owner","next","product","consent"]],
-  followup:["Buat draf tindak lanjut. Draf promosi memerlukan persetujuan komunikasi.",["business","id"],[],["promotional"]],
-  ticket:["Ubah status tiket CS",["business","id","stage"]],
-  learn:["Simpan contoh layanan yang diizinkan dan sudah dikurangi data pribadinya. group adalah ID percakapan sumber.",["business","question","intent","label"],["answer","group"],["approved"]],
-  review:["Setujui atau cabut kelayakan contoh pembelajaran",["business","id"],[],["approved"]],
-  remove_example:["Hapus contoh yang keliru dan batalkan versi yang memakai contoh itu",["business","id"]],
-  train:["Latih dan evaluasi pengklasifikasi maksud per bisnis",["business"]],
-  activate:["Aktifkan versi yang lulus evaluasi atau pilih versi aturan awal dengan ID kosong",["business"],["id"]],
-  integration:["Catat penyedia yang dipilih untuk Desain, Penerbit, WhatsApp Business, CRM, atau Analitik",["business","service","provider"]],
-  spend:["Catat pengeluaran aktual kampanye dalam rupiah",["business","id"],[],[],["spend"]],
-  report:["Baca performa per kampanye atau wilayah dengan tanggal WIB YYYY-MM-DD",["business"],["campaign","region","start","end"]]
+const methodSpecs = {
+  list: ["Daftar workshop MBACS yang dapat diakses", []],
+  create: ["Buat workspace CRM bengkel", ["name"], ["phone", "address"], [], [], ["seed"]],
+  state: ["Baca profil, pelanggan, kendaraan, lead, percakapan, booking, dan tugas", ["workshop"]],
+  sync: ["Sinkronkan snapshot CRM setelah perubahan pengguna", ["workshop"], [], [], ["revision"], ["data"]],
+  customer: ["Tambah pelanggan dan kendaraan", ["workshop", "name", "phone"], ["vehicle", "plate"]],
+  lead: ["Tambah lead dengan kebutuhan dan next action", ["workshop", "name", "need"], ["vehicle", "next"], [], ["score"]],
+  appointment: ["Buat booking bengkel", ["workshop", "name", "date", "time", "job"], [], [], ["bay"]],
+  message: ["Simpan draf balasan CS pada percakapan", ["workshop", "conversation", "body"]],
+  advance_lead: ["Pindahkan lead ke tahap berikutnya", ["workshop"], ["next"], [], ["from", "index"]],
+  grant: ["Kelola akses workshop berdasarkan email akun", ["workshop", "email", "role"]]
 };
-const schemas=Object.entries(methods).map(([name,[description,required,strings=[],bools=[],numbers=[],objects=[]]])=>({
-  name,description,inputSchema:{type:"object",properties:Object.fromEntries([
-    ...[...required,...strings].map(k=>[k,{type:"string"}]),...bools.map(k=>[k,{type:"boolean"}]),...numbers.map(k=>[k,{type:"number"}]),...objects.map(k=>[k,{type:"object",properties:Object.fromEntries(["source","medium","campaign","term","content"].map(x=>[x,{type:"string"}])),additionalProperties:false}])
-  ]),required,additionalProperties:false},
-  annotations:{readOnlyHint:!writeActions.has(name)&&name!=="create",destructiveHint:name==="remove_example",openWorldHint:false}
+
+const schemas = Object.entries(methodSpecs).map(([name, [description, required, strings = [], bools = [], numbers = [], objects = []]]) => ({
+  name,
+  description,
+  inputSchema: {
+    type: "object",
+    properties: Object.fromEntries([
+      ...[...required, ...strings].map(key => [key, { type: "string" }]),
+      ...bools.map(key => [key, { type: "boolean" }]),
+      ...numbers.map(key => [key, { type: "number" }]),
+      ...objects.map(key => [key, { type: "object", additionalProperties: true }])
+    ]),
+    required,
+    additionalProperties: false
+  },
+  annotations: { readOnlyHint: readOnlyActions.has(name), destructiveHint: false, openWorldHint: false }
 }));
-const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
-class RequestError extends Error {constructor(message,status){super(message);this.status=status;}}
-const access=(row,b,user)=>row.owner===user.id?"owner":Object.hasOwn(b.members,user.email)?b.members[user.email]:null;
-async function execute(db,user,name,a) {
-  if(!Object.hasOwn(methods,name)) throw new RequestError("Tindakan tidak ditemukan.",404);
-  if(name==="list") {
-    const rows=await db.prepare("SELECT id, owner, data FROM businesses WHERE owner = ?1 OR EXISTS (SELECT 1 FROM json_each(json_extract(data, '$.members')) WHERE key = ?2) ORDER BY id").bind(user.id,user.email).all();
-    return rows.results.map(row=>{const b=JSON.parse(row.data);return {id:row.id,name:b.profile.name,region:b.profile.region,phone:b.profile.phone,role:access(row,b,user)};}).filter(row=>row.role);
+
+const json = (body, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } });
+class RequestError extends Error { constructor(message, status) { super(message); this.status = status; } }
+const roleFor = (row, record, user) => row.owner === user.id ? "owner" : record.members[user.email] || null;
+
+async function execute(db, user, name, args) {
+  if (!Object.hasOwn(methodSpecs, name)) throw new RequestError("Tindakan tidak ditemukan.", 404);
+  if (name === "list") {
+    const rows = await db.prepare("SELECT id, owner, revision, data FROM workshops WHERE owner = ?1 OR EXISTS (SELECT 1 FROM json_each(json_extract(data, '$.members')) WHERE key = ?2) ORDER BY id").bind(user.id, user.email).all();
+    return rows.results.map(row => { const record = JSON.parse(row.data); return { id: row.id, name: record.profile.name, role: roleFor(row, record, user), revision: row.revision }; }).filter(row => row.role);
   }
-  if(name==="create"){
-    const id=crypto.randomUUID();
-    const b=business(a);
-    await db.prepare("INSERT INTO businesses (id,owner,data) VALUES (?,?,?)").bind(id,user.id,JSON.stringify(b)).run();
-    return {id,...b.profile};
+  if (name === "create") {
+    const id = crypto.randomUUID();
+    const record = workshop({ ...args, actor: user.email });
+    await db.prepare("INSERT INTO workshops (id, owner, data) VALUES (?, ?, ?)").bind(id, user.id, JSON.stringify(record)).run();
+    return { id, name: record.profile.name, revision: 0 };
   }
-  const id=clean(a.business,64);
-  for(let attempt=0;attempt<5;attempt++){
-    const row=await db.prepare("SELECT owner,revision,data FROM businesses WHERE id=?").bind(id).first();
-    const b=row&&JSON.parse(row.data);
-    const role=b&&access(row,b,user);
-    if(!role) throw new RequestError("Profil bisnis tidak ditemukan atau akses belum diberikan.",404);
-    if((adminActions.has(name)&&role==="agent"&&(name!=="learn"||a.approved===true))||(name==="grant"&&role!=="owner")) throw new RequestError("Tindakan ini memerlukan akses admin atau pemilik.",403);
-    const result=action(b,name,a);
-    if(!writeActions.has(name)||result?.duplicate||result?.confirmation) return result;
-    const changed=await db.prepare("UPDATE businesses SET data=?, revision=revision+1 WHERE id=? AND revision=?").bind(JSON.stringify(b),id,row.revision).run();
-    if(changed.meta.changes===1) return result;
+
+  const id = clean(args.workshop, 64);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const row = await db.prepare("SELECT owner, revision, data FROM workshops WHERE id = ?").bind(id).first();
+    if (!row) throw new RequestError("Workshop tidak ditemukan.", 404);
+    const record = JSON.parse(row.data);
+    const role = roleFor(row, record, user);
+    if (!role) throw new RequestError("Akses workshop tidak tersedia.", 403);
+    if (ownerActions.has(name) && role !== "owner") throw new RequestError("Tindakan ini memerlukan akses pemilik.", 403);
+    if (name === "state") return { ...record, revision: row.revision };
+    if (name === "sync" && Number(args.revision) !== row.revision) throw new RequestError("Data berubah di perangkat lain. Muat ulang sebelum menyimpan.", 409);
+    const result = action(record, name, args, user.email);
+    const updated = await db.prepare("UPDATE workshops SET data = ?, revision = revision + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND revision = ?").bind(JSON.stringify(record), id, row.revision).run();
+    if (updated.meta.changes === 1) return { ...result, revision: row.revision + 1 };
   }
-  throw new RequestError("Data sedang diperbarui. Coba lagi dengan ID kiriman yang sama.",409);
+  throw new RequestError("Data sedang diperbarui. Coba lagi.", 409);
 }
-function rpc(id,data){return {jsonrpc:"2.0",id,result:data};}
-async function handleMcp(db,user,body) {
-  const id=body?.id??null;
-  switch(body?.method) {
-    case "server/discover": return json(rpc(id,{supportedVersions:["2026-07-28"],capabilities:{tools:{}}}));
-    case "initialize": return json(rpc(id,{protocolVersion:body.params?.protocolVersion??"2026-07-28",capabilities:{tools:{}},serverInfo:{name:"MBACS",version:"1.0.0"}}));
-    case "ping": return json(rpc(id,{}));
-    case "notifications/initialized": return new Response(null,{status:202});
-    case "tools/list": return json(rpc(id,{tools:schemas}));
-    case "tools/call":
-      if(!user)return json({jsonrpc:"2.0",id,error:{code:-32001,message:"Masuk dengan ChatGPT untuk mengakses data bisnis."}});
-      try {
-        const result=await execute(db,user,body.params?.name,body.params?.arguments??{});
-        return json(rpc(id,{content:[{type:"text",text:JSON.stringify(result)}],isError:false}));
-      } catch(e) { return json(rpc(id,{content:[{type:"text",text:e.message}],isError:true})); }
-    default:return json({jsonrpc:"2.0",id,error:{code:-32601,message:"Method not found"}});
+
+const rpc = (id, data) => ({ jsonrpc: "2.0", id, result: data });
+async function handleMcp(db, user, body) {
+  const id = body?.id ?? null;
+  if (body?.method === "server/discover") return json(rpc(id, { supportedVersions: ["2026-07-28"], capabilities: { tools: {} } }));
+  if (body?.method === "initialize") return json(rpc(id, { protocolVersion: body.params?.protocolVersion ?? "2026-07-28", capabilities: { tools: {} }, serverInfo: { name: "MBACS CRM", version: "2.0.0" } }));
+  if (body?.method === "ping") return json(rpc(id, {}));
+  if (body?.method === "notifications/initialized") return new Response(null, { status: 202 });
+  if (body?.method === "tools/list") return json(rpc(id, { tools: schemas }));
+  if (body?.method === "tools/call") {
+    if (!user) return json({ jsonrpc: "2.0", id, error: { code: -32001, message: "Masuk dengan ChatGPT untuk mengakses MBACS." } });
+    try {
+      const result = await execute(db, user, body.params?.name, body.params?.arguments ?? {});
+      return json(rpc(id, { content: [{ type: "text", text: JSON.stringify(result) }], isError: false }));
+    } catch (error) {
+      return json(rpc(id, { content: [{ type: "text", text: error.message }], isError: true }));
+    }
   }
+  return json({ jsonrpc: "2.0", id, error: { code: -32601, message: "Method not found" } });
 }
-const responseAsset=(asset,type)=>new Response(asset,{headers:{"content-type":type,"x-content-type-options":"nosniff"}});
-export default {async fetch(request,env){
-  const url=new URL(request.url);
-  const path=url.pathname;
-  if(request.method==="GET"){
-    const file=assets[path];
-    if(file)return responseAsset(file[0],file[1]);
-    return new Response("Halaman tidak ditemukan",{status:404});
+
+const assetResponse = ([body, type]) => new Response(body, { headers: { "content-type": type, "x-content-type-options": "nosniff", "cache-control": type.startsWith("text/html") ? "no-store" : "public, max-age=300" } });
+
+export default { async fetch(request, env) {
+  const url = new URL(request.url);
+  if (request.method === "GET") {
+    const asset = assets[url.pathname];
+    return asset ? assetResponse(asset) : new Response("Halaman tidak ditemukan", { status: 404 });
   }
-  if(request.method!=="POST"||!["/mcp","/api"].includes(path))return new Response(null,{status:405});
-  if(path==="/api"&&request.headers.get("origin")!==url.origin)return json({error:"Asal permintaan tidak valid."},403);
-  const id=request.headers.get("oai-authenticated-user-id");
-  if(path==="/api"&&!id)return json({error:"Masuk dengan ChatGPT untuk melanjutkan."},401);
-  const user=id?{id,email:clean(request.headers.get("oai-authenticated-user-email"),254).toLowerCase()}:null;
+  if (request.method !== "POST" || !["/api", "/mcp"].includes(url.pathname)) return new Response(null, { status: 405 });
+  if (url.pathname === "/api" && request.headers.get("origin") !== url.origin) return json({ error: "Asal permintaan tidak valid." }, 403);
+  const userId = request.headers.get("oai-authenticated-user-id");
+  if (!userId) return json({ error: "Masuk dengan ChatGPT untuk melanjutkan." }, 401);
+  const user = { id: userId, email: clean(request.headers.get("oai-authenticated-user-email"), 254).toLowerCase() };
   try {
-    const payload=await request.text();
-    if(payload.length>50000)return json({error:"Kiriman terlalu besar."},413);
-    const body=JSON.parse(payload);
-    if(path==="/mcp")return await handleMcp(env.DB,user,body);
-    return json({result:await execute(env.DB,user,body?.action,body?.args??{})});
-  } catch(e) {return json({error:e.message},e.status??400);}
-}};
+    const payload = await request.text();
+    if (payload.length > 500000) return json({ error: "Kiriman terlalu besar." }, 413);
+    const body = JSON.parse(payload);
+    if (url.pathname === "/mcp") return handleMcp(env.DB, user, body);
+    return json({ result: await execute(env.DB, user, body?.action, body?.args ?? {}) });
+  } catch (error) {
+    return json({ error: error.message }, error.status ?? 400);
+  }
+} };

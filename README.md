@@ -1,10 +1,10 @@
 # MBACS
 
-**MBACS** adalah fondasi aplikasi Customer Service dan CRM untuk bengkel. Fokus produk mengikuti alur:
+**MBACS** adalah aplikasi Customer Service dan CRM untuk bengkel. Fokus produk mengikuti alur:
 
 `Customer Service → Lead Management → Booking → CRM → Retention`
 
-Versi awal ini menyediakan prototipe antarmuka yang responsif untuk:
+Versi ini menyediakan antarmuka responsif dan backend Site dengan penyimpanan D1 untuk:
 
 - ringkasan operasional dan KPI;
 - inbox WhatsApp dengan konteks pelanggan dan saran AI;
@@ -14,7 +14,15 @@ Versi awal ini menyediakan prototipe antarmuka yang responsif untuk:
 - after-sales dan retensi;
 - pengaturan integrasi, workflow, dan guardrail AI.
 
-## Menjalankan secara lokal
+## Arsitektur
+
+- **Dashboard:** HTML, CSS, dan JavaScript buildless di `dist/`.
+- **Backend Site:** Cloudflare Worker di `src/worker.mjs`.
+- **Penyimpanan Site:** D1 melalui binding `DB`, dengan sinkronisasi optimistis dan fallback `localStorage`.
+- **Target produksi VPS:** PostgreSQL 16 dan n8n melalui `docker-compose.yml`.
+- **Skema bisnis:** `database/postgres/001_schema.sql` mencakup workshop, pelanggan, kendaraan, lead, percakapan, booking, servis, retensi, AI, dan audit.
+
+## Menjalankan dashboard secara lokal
 
 Proyek ini buildless. Jalankan server statis dari root proyek:
 
@@ -28,10 +36,21 @@ Pemeriksaan runtime ringan dapat dijalankan dengan:
 
 ```bash
 node scripts/smoke-ui.mjs
+node --test tests/domain.test.mjs
 ```
+
+## Menjalankan PostgreSQL dan n8n
+
+Salin `.env.example` menjadi `.env`, ganti seluruh kata sandi dan encryption key, lalu jalankan:
+
+```bash
+docker compose up -d
+```
+
+PostgreSQL membuat database dan role terpisah: `mbacs_db`/`mbacs_app` untuk CRM serta `n8n_db`/`n8n_app` untuk workflow.
 
 ## Status
 
-Versi saat ini menggunakan data contoh yang dapat diubah dan disimpan di `localStorage` browser. Pengguna dapat menambahkan booking, lead, dan pelanggan; memajukan lead; menyelesaikan tugas; membalas pesan; membuka Customer 360; serta mengekspor atau mereset data demo.
+Data dashboard disinkronkan ke D1 untuk pengguna Site yang telah masuk. Jika backend belum tersedia—misalnya pada preview statis lokal—aplikasi otomatis memakai `localStorage` tanpa menghilangkan fungsi utama.
 
-Penyimpanan browser ini ditujukan untuk validasi MVP. Integrasi PostgreSQL, n8n, WhatsApp Business Cloud API, backend, dan autentikasi tetap menjadi tahap implementasi produksi berikutnya.
+PostgreSQL dan n8n sudah memiliki fondasi lokal, tetapi WhatsApp Business Cloud API, OpenAI API, serta deployment VPS masih memerlukan kredensial dan konfigurasi lingkungan milik pengguna.

@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      MBACS_DB_PASSWORD: ${MBACS_DB_PASSWORD}
+      N8N_DB_PASSWORD: ${N8N_DB_PASSWORD}
+    ports:
+      - "${MBACS_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - mbacs_postgres_data:/var/lib/postgresql/data
+      - ./database/postgres/000_init.sh:/docker-entrypoint-initdb.d/000_init.sh:ro
+      - ./database/postgres/001_schema.sql:/opt/mbacs/001_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n_db
+      DB_POSTGRESDB_USER: n8n_app
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Jakarta}
+      TZ: ${GENERIC_TIMEZONE:-Asia/Jakarta}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+    ports:
+      - "${MBACS_N8N_PORT:-5678}:5678"
+    volumes:
+      - mbacs_n8n_data:/home/node/.n8n
+
+volumes:
+  mbacs_postgres_data:
+  mbacs_n8n_data:

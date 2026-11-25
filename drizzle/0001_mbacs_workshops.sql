@@ -1,0 +1,10 @@
+CREATE TABLE workshops (
+  id TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  revision INTEGER NOT NULL DEFAULT 0,
+  data TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX workshops_owner_idx ON workshops(owner);
